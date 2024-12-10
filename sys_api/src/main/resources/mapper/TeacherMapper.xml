@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="duan.thesis_select_system.mapper.TeacherMapper">
+
+    <select id="selectTeacher" resultType="duan.thesis_select_system.entity.Teacher">
+        SELECT *
+        FROM teacher
+    </select>
+    <select id="selectTeacherStudent" resultType="duan.thesis_select_system.entity.vo.Teacher_vo">
+        SELECT *
+        FROM teacher,teacher_student
+        WHERE teacher.tno= teacher_student.tno
+        AND teacher.tno=#{tno}
+    </select>
+</mapper>

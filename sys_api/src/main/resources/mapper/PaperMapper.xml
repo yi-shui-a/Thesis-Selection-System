@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="duan.thesis_select_system.mapper.PaperMapper">
+    <update id="acceptStudent">
+        UPDATE student_paper
+        SET accept_status='ACCEPT',refuse_reason=''
+        WHERE sno=#{sno}
+        AND pno=#{pno};
+        UPDATE paper
+        SET select_status='HAS_SELECT'
+        WHERE pno=#{pno};
+        UPDATE teacher_student
+        SET has_teach_num=has_teach_num+1
+        WHERE tno=(
+        SELECT tno
+        FROM paper
+        WHERE pno=#{pno})
+        AND schoolyear=(
+        SELECT schoolyear
+        FROM student
+        WHERE sno=#{sno}
+        );
+
+    </update>
+    <update id="refuseStudent">
+        UPDATE student_paper
+        SET accept_status='REFUSE',refuse_reason=#{refuseReason}
+        WHERE sno=#{sno}
+        AND pno=#{pno};
+        UPDATE student
+        SET selected_topic_num=selected_topic_num-1
+        WHERE sno=#{sno};
+    </update>
+
+    <select id="GetPaper" resultType="duan.thesis_select_system.entity.vo.Paper_teacher_vo">
+        SELECT *
+        FROM paper,student,`student_paper`
+        WHERE paper.tno= #{tno}
+        AND paper.title like CONCAT('%',#{title},'%')
+        AND paper.type like CONCAT('%',#{type},'%')
+        AND paper.check_status like CONCAT('%',#{check_status},'%')
+        AND paper.select_status like CONCAT('%',#{select_status},'%')
+        AND student.student_name like CONCAT('%',#{studentname},'%')
+        AND paper.schoolyear like CONCAT('%',#{schoolyear},'%')
+        AND student_paper.accept_status like CONCAT('%',#{accept_status},'%')
+        AND paper.schoolyear=student.schoolyear
+        AND `student_paper`.sno=student.sno
+        AND `student_paper`.pno=paper.pno
+    </select>
+    <select id="GetPaper_no_name" resultType="duan.thesis_select_system.entity.vo.Paper_teacher_vo">
+        SELECT *
+        FROM paper
+        WHERE paper.tno= #{tno}
+        AND paper.title like CONCAT('%',#{title},'%')
+        AND paper.type like CONCAT('%',#{type},'%')
+        AND paper.check_status like CONCAT('%',#{check_status},'%')
+        AND paper.select_status like CONCAT('%',#{select_status},'%')
+        AND paper.schoolyear like CONCAT('%',#{schoolyear},'%')
+    </select>
+    <select id="GetStudentPaper" resultType="duan.thesis_select_system.entity.vo.Paper_teacher_vo">
+        SELECT *
+        FROM paper,student,student_paper
+        WHERE paper.tno= #{tno}
+        AND paper.title like CONCAT('%',#{title},'%')
+        AND paper.type like CONCAT('%',#{type},'%')
+        AND student.student_name like CONCAT('%',#{studentname},'%')
+        AND paper.schoolyear like CONCAT('%',#{schoolyear},'%')
+        AND paper.select_status like CONCAT('%',#{select_status},'%')
+        AND paper.check_status='CHECK'
+        AND `student_paper`.accept_status='NOT_CHECK'
+        AND paper.schoolyear=student.schoolyear
+        AND `student_paper`.sno=student.sno
+        AND student_paper.pno=paper.pno
+    </select>
+    <select id="GetPaperSelected" resultType="duan.thesis_select_system.entity.vo.Paper_teacher_vo">
+        SELECT *
+        FROM paper,student,student_paper
+        WHERE paper.tno= #{tno}
+        AND paper.title like CONCAT('%',#{title},'%')
+        AND paper.type like CONCAT('%',#{type},'%')
+        AND student.student_name like CONCAT('%',#{studentname},'%')
+        AND paper.schoolyear like CONCAT('%',#{schoolyear},'%')
+        AND paper.select_status='HAS_SELECT'
+        AND paper.check_status='CHECK'
+        AND `student_paper`.accept_status='ACCEPT'
+        AND paper.schoolyear=student.schoolyear
+        AND `student_paper`.sno=student.sno
+        AND student_paper.pno=paper.pno
+    </select>
+    <select id="GetAllPaper" resultType="duan.thesis_select_system.entity.vo.Paper_Admin_vo">
+        SELECT *
+        FROM paper,teacher
+        WHERE paper.tno=teacher.tno
+        AND teacher_name like CONCAT('%',#{teacher_name},'%')
+        AND paper.title like CONCAT('%',#{title},'%')
+        AND paper.type like CONCAT('%',#{type},'%')
+        AND paper.check_status like CONCAT('%',#{check_status},'%')
+        AND paper.schoolyear like CONCAT('%',#{schoolyear},'%')
+    </select>
+    <select id="GetHistoryPaperByTno" resultType="duan.thesis_select_system.entity.vo.Paper_teacher_vo">
+        SELECT *
+        FROM paper,student,student_paper
+        WHERE paper.tno= #{tno}
+        AND paper.title like CONCAT('%',#{title},'%')
+        AND paper.type like CONCAT('%',#{type},'%')
+        AND student.student_name like CONCAT('%',#{studentname},'%')
+        AND paper.schoolyear like CONCAT('%',#{schoolyear},'%')
+        AND student_paper.accept_status like CONCAT('%',#{accept_status},'%')
+        AND paper.schoolyear=student.schoolyear
+        AND `student_paper`.sno=student.sno
+        AND student_paper.pno=paper.pno
+
+
+    </select>
+</mapper>

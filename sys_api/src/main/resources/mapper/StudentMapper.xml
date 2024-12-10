@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="duan.thesis_select_system.mapper.StudentMapper">
+    <insert id="SelectPaper">
+        INSERT INTO student_paper(sno,pno,accept_status,create_time)
+        VALUES(#{sno},#{pno},'NOT_CHECK',NOW());
+        UPDATE student
+        SET selected_topic_num=selected_topic_num+1
+        WHERE sno=#{sno};
+    </insert>
+    <update id="ReSelectPaper">
+        UPDATE student_paper
+        SET accept_status='NOT_CHECK',refuse_reason=''
+        WHERE sno=#{sno}
+        AND pno=#{pno};
+        UPDATE student
+        SET selected_topic_num=selected_topic_num+1
+        WHERE sno=#{sno};
+    </update>
+    <delete id="CancelPaper">
+        DELETE FROM student_paper
+        WHERE sno=#{sno}
+        AND pno=#{pno}
+        AND accept_status='NOT_CHECK';
+        UPDATE student
+        SET selected_topic_num=selected_topic_num-1
+        WHERE sno=#{sno};
+    </delete>
+
+    <select id="GetAblePaper" resultType="duan.thesis_select_system.entity.vo.Paper_Student_vo">
+        SELECT *
+        FROM paper,teacher
+        WHERE paper.schoolyear=(
+            SELECT schoolyear
+            FROM student
+            WHERE sno = #{sno}
+            )
+        AND paper.check_status ='CHECK'
+        AND paper.select_status ='NOT_SELECT'
+        AND paper.tno = teacher.tno
+
+    </select>
+    <select id="GetMyPaper" resultType="duan.thesis_select_system.entity.vo.Paper_Student_vo">
+        SELECT *
+        FROM paper,teacher,student_paper
+        WHERE student_paper.sno = #{sno}
+        AND student_paper.accept_status LIKE CONCAT('%',#{acceptstatus},'%')
+        AND student_paper.pno = paper.pno
+        AND paper.tno = teacher.tno
+
+    </select>
+</mapper>

@@ -1,0 +1,1219 @@
+Index: sys_api/src/main/java/duan/thesis_select_system/controller/TeacherController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_api/src/main/java/duan/thesis_select_system/controller/TeacherController.java b/sys_api/src/main/java/duan/thesis_select_system/controller/TeacherController.java
+--- a/sys_api/src/main/java/duan/thesis_select_system/controller/TeacherController.java	(revision 5dcf03d4b1b03390c2455bfdcc693e2d91d537f1)
++++ b/sys_api/src/main/java/duan/thesis_select_system/controller/TeacherController.java	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -154,6 +154,16 @@
+         return Result.succ("拒绝学生成功");
+     }
+ 
++    @PostMapping("re_check_paper")
++    public Result re_check_paper(@RequestBody Paper paper) throws Exception {
++        try {
++            paperService.reCheckPaper(paper);
++        } catch (Exception e) {
++            throw new Exception(e.getMessage());
++        }
++        return Result.succ("重新审核成功");
++    }
++
+ 
+ 
+ 
+Index: sys_api/src/main/java/duan/thesis_select_system/controller/UtilsController.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_api/src/main/java/duan/thesis_select_system/controller/UtilsController.java b/sys_api/src/main/java/duan/thesis_select_system/controller/UtilsController.java
+--- a/sys_api/src/main/java/duan/thesis_select_system/controller/UtilsController.java	(revision 5dcf03d4b1b03390c2455bfdcc693e2d91d537f1)
++++ b/sys_api/src/main/java/duan/thesis_select_system/controller/UtilsController.java	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -36,6 +36,8 @@
+     private SelectDeadlineMapper selectDeadlineMapper;
+     @Autowired
+     private SelectDeadlineServiceImpl selectDeadlineService;
++    @Autowired
++    private PaperServiceImpl paperService;
+     @GetMapping("/get_title_type")
+     public Result titleType(){
+         return Result.succ(titleTypeService.getall());
+@@ -148,6 +150,10 @@
+     }
+ 
+ 
++    @GetMapping("/get_paper_by_pno")
++    public Result getPaperByPno(@RequestParam("pno") String pno){
++        return Result.succ(paperService.getPaperByPno(pno));
++    }
+ 
+ 
+ 
+Index: sys_api/src/main/java/duan/thesis_select_system/service/impl/PaperServiceImpl.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_api/src/main/java/duan/thesis_select_system/service/impl/PaperServiceImpl.java b/sys_api/src/main/java/duan/thesis_select_system/service/impl/PaperServiceImpl.java
+--- a/sys_api/src/main/java/duan/thesis_select_system/service/impl/PaperServiceImpl.java	(revision 5dcf03d4b1b03390c2455bfdcc693e2d91d537f1)
++++ b/sys_api/src/main/java/duan/thesis_select_system/service/impl/PaperServiceImpl.java	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -57,7 +57,7 @@
+                 paperMapper.deleteById(pno);
+             }
+             catch (Exception e){
+-                throw new RuntimeException("删除失败，未知错误");
++                throw new RuntimeException("该题目已被选，无法删除");
+             }
+         }
+         else {
+@@ -228,4 +228,27 @@
+         paper.setCheckStatus(REFUSE);
+         paperMapper.update(paper,wrapper);
+     }
++
++    public Paper getPaperByPno(String pno) {
++        LambdaQueryWrapper<Paper> wrapper = new LambdaQueryWrapper<>();
++        wrapper.eq(Paper::getPno,pno);
++        Paper paper = paperMapper.selectOne(wrapper);
++        if(paper==null)
++            throw new RuntimeException("该题目不存在");
++        return paper;
++    }
++
++    public void reCheckPaper(Paper paper) {
++        LambdaQueryWrapper<Paper> wrapper = new LambdaQueryWrapper<>();
++        wrapper.eq(Paper::getPno,paper.getPno());
++        Paper paper1 = paperMapper.selectOne(wrapper);
++        if(paper1==null)
++            throw new RuntimeException("该题目不存在");
++        if(paper1.getCheckStatus().equals(NOT_CHECK))
++            throw new RuntimeException("该题目未审核");
++        if(paper1.getCheckStatus().equals(CHECKED))
++            throw new RuntimeException("该题目已审核");
++        paper.setCheckStatus(NOT_CHECK);
++
++    }
+ }
+Index: sys_view/view/src/App.vue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/App.vue b/sys_view/view/src/App.vue
+--- a/sys_view/view/src/App.vue	(revision 5dcf03d4b1b03390c2455bfdcc693e2d91d537f1)
++++ b/sys_view/view/src/App.vue	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -17,6 +17,7 @@
+   text-align: center;
+   color: #2c3e50;
+ }
++
+ body {
+   margin: 0;
+ }
+Index: sys_view/view/src/api/static_data_api.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/api/static_data_api.js b/sys_view/view/src/api/static_data_api.js
+--- a/sys_view/view/src/api/static_data_api.js	(revision 5dcf03d4b1b03390c2455bfdcc693e2d91d537f1)
++++ b/sys_view/view/src/api/static_data_api.js	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -10,4 +10,16 @@
+         url: '/utils/get_schoolyear_list',
+         method: 'GET'
+     })
+-}
+\ No newline at end of file
++}
++export function GetTeacherTitleList(){
++    return axios({
++        url: '/utils/get_title_list',
++        method: 'GET'
++    })
++}
++export function GetEducationList(){
++    return axios({
++        url: '/utils/get_education_list',
++        method: 'GET'
++    })
++}
+Index: sys_view/view/src/api/teacher_api.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/api/teacher_api.js b/sys_view/view/src/api/teacher_api.js
+--- a/sys_view/view/src/api/teacher_api.js	(revision 5dcf03d4b1b03390c2455bfdcc693e2d91d537f1)
++++ b/sys_view/view/src/api/teacher_api.js	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -9,6 +9,22 @@
+     }
+   })
+ }
++export function EditPaper(paper){
++    return axios({
++        url: '/teacher/update_paper',
++        method: 'POST',
++        data: paper
++    })
++}
++export function DeletePaper(pno){
++    return axios({
++        url: '/teacher/delete_paper',
++        method: 'POST',
++        params:{
++            pno: pno
++        }
++    })
++}
+ export function GetAllPaperByTno(tno){
+     return axios({
+         url: '/teacher/get_paper',
+@@ -18,6 +34,32 @@
+         }
+     })
+ }
++export function GetPaperByPno(pno){
++    return axios({
++        url: '/utils/get_paper_by_pno',
++        method: 'GET',
++        params:{
++            pno: pno
++        }
++    })
++}
++export function EditTeacherInfo(data){
++    return axios({
++        url: '/teacher/update_myinfo',
++        method: 'POST',
++        data: data
++    })
++}
++export function ResetPassword(tno,password){
++    return axios({
++        url: '/teacher/update_password',
++        method: 'POST',
++        params:{
++            tno: tno,
++            password: password
++        }
++    })
++}
+ export function TeacherGetAllPaper(tno,queryData){
+     return axios({
+         url: '/teacher/get_paper',
+Index: sys_view/view/src/router/index.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/router/index.js b/sys_view/view/src/router/index.js
+--- a/sys_view/view/src/router/index.js	(revision 5dcf03d4b1b03390c2455bfdcc693e2d91d537f1)
++++ b/sys_view/view/src/router/index.js	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -3,12 +3,16 @@
+ import login from "@/views/login";
+ 
+ 
+-import MyPaper from "@/views/teacher/NeedCheckPaper";
++
+ import teacherhome from "@/views/teacher/TeacherHome/teacherhome";
+ import teacher from "@/views/teacher";
+ import BaseLayOut from "@/components/BaseLayOut";
+ import paperFindQurey from "@/views/teacher/paperFindQurey";
+-import NeedCheckPaper from "@/views/teacher/NeedCheckPaper";
++import NeedCheckPaper from "@/views/teacher/Paper/NeedCheckPaper";
++import editorTeacherInfo from "@/views/teacher/TeacherHome/editorTeacherInfo";
++import teacheRresetPassword from "@/views/teacher/TeacherHome/teacheRresetPassword";
++import Mypaper from "@/views/teacher/Paper/Mypaper";
++import TeacherEditPaper from "@/views/teacher/Paper/TeacherEditPaper";
+ 
+ Vue.use(VueRouter)
+ 
+@@ -17,12 +21,17 @@
+     path: '/',
+     name: 'login',
+     component: login
++  },
++  {
++    path: '/login',
++    name: 'login',
++    component: login
+   },
+   {
+     path:'/teacher',
+     name:'teacher',
+     meta:{requireAuth:true},
+-    redirect: '/teacher/home',
++    redirect: 'home',
+     component:BaseLayOut,
+     children:[
+       {path:'/teacher',
+@@ -36,7 +45,20 @@
+             name: '个人信息',
+             component: teacherhome,
+             meta: {requireAuth: true}
+-          }
++          },
++          {
++            path: '/teacher/edit_info',
++            name: '修改信息',
++            component: editorTeacherInfo,
++            meta: {requireAuth: true}
++          },
++            {
++                path: '/teacher/edit_password',
++                name: '修改密码',
++                component: teacheRresetPassword,
++                meta: {requireAuth: true}
++            }
++
+         ]
+       },
+       {
+@@ -44,12 +66,27 @@
+         name:'选题管理',
+         component: teacher,
+         meta: {requireAuth: true},
+-        children:[{
++        children:[
++          {
++            path: '/teacher/my_paper',
++            name: '我的选题',
++            component: Mypaper,
++            meta: {requireAuth: true}
++
++          },
++          {
++            path: '/teacher/edit_paper',
++            name: '编辑选题',
++            component: TeacherEditPaper,
++            meta: {requireAuth: true}
++          },
++         {
+           path:'/teacher/check_paper',
+           name:'审核选题',
+           component: NeedCheckPaper,
+           meta: {requireAuth: true},
+         },
++
+           {
+             path:'/teacher/test',
+             name:'查询条件测试',
+Index: sys_view/view/src/store/index.js
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/store/index.js b/sys_view/view/src/store/index.js
+--- a/sys_view/view/src/store/index.js	(revision 5dcf03d4b1b03390c2455bfdcc693e2d91d537f1)
++++ b/sys_view/view/src/store/index.js	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -5,7 +5,8 @@
+ 
+ export default new Vuex.Store({
+   state: {
+-    queryData:{} // 用于存储查询条件
++    queryData:{}, // 用于存储查询条件,
++    pno: null,
+ 
+   },
+   getters: {
+@@ -13,6 +14,9 @@
+   mutations: {
+     setQueryData(state, data) {
+         state.queryData = data
++    },
++    setPno(state, data) {
++        state.pno = data
+     }
+   },
+   actions: {
+Index: sys_view/view/src/views/login/index.vue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/views/login/index.vue b/sys_view/view/src/views/login/index.vue
+--- a/sys_view/view/src/views/login/index.vue	(revision 5dcf03d4b1b03390c2455bfdcc693e2d91d537f1)
++++ b/sys_view/view/src/views/login/index.vue	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -82,13 +82,13 @@
+             if(res.data.code===200){
+               sessionStorage.setItem("tno",that.form.username)
+               sessionStorage.setItem("token",res.data.data.token)
+-              sessionStorage.setItem("name",res.data.data.user.name)
++              sessionStorage.setItem("teacherName",res.data.data.user.teacherName)
+               sessionStorage.setItem("email",res.data.data.user.email)
+               sessionStorage.setItem("tel",res.data.data.user.tel)
+               
+               sessionStorage.setItem("type",'teacher')
+ 
+-              this.$router.push("/teacher")
++              this.$router.push("/teacher/home")
+             }else{
+               this.$message.error(res.data.msg)
+             }
+Index: sys_view/view/src/views/teacher/Mypaper.vue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/views/teacher/Mypaper.vue b/sys_view/view/src/views/teacher/MyInfo/teacherindex.vue
+rename from sys_view/view/src/views/teacher/Mypaper.vue
+rename to sys_view/view/src/views/teacher/MyInfo/teacherindex.vue
+--- a/sys_view/view/src/views/teacher/Mypaper.vue	(revision 5dcf03d4b1b03390c2455bfdcc693e2d91d537f1)
++++ b/sys_view/view/src/views/teacher/MyInfo/teacherindex.vue	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -1,10 +1,10 @@
+ <template>
+-
++<router-view></router-view>
+ </template>
+ 
+ <script>
+ export default {
+-  name: "Mypaper"
++  name: "teacherindex"
+ }
+ </script>
+ 
+Index: sys_view/view/src/views/teacher/Paper/Mypaper.vue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/views/teacher/Paper/Mypaper.vue b/sys_view/view/src/views/teacher/Paper/Mypaper.vue
+new file mode 100644
+--- /dev/null	(revision 6e958fcd95782418213903985fba7906a975cf17)
++++ b/sys_view/view/src/views/teacher/Paper/Mypaper.vue	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -0,0 +1,264 @@
++<template>
++  <div class="t-table" style="width:100%;">
++    <div class="query-data">
++      <t-query-condition ref="queryCondition" :opts="opts" @submit="conditionEnter">
++        <template #checkStatus="{param}">
++          <el-input v-model="param.checkStatus" clearable placeholder="自定义插槽输入框" />
++        </template>
++      </t-query-condition>
++    </div>
++    <div class="t-table" style="width:100%;">
++      <t-table :table="table" :columns="columns" />
++    </div>
++
++
++  </div>
++</template>
++
++<script>
++import {
++  AcceptPaper,
++  DeletePaper,
++  GetAllPaperByTno,
++  GetPaperNeedCheck,
++  RefusePaper,
++  TeacherGetAllPaper
++} from "@/api/teacher_api";
++import QueryData from "@/views/teacher/paperFindQurey";
++import {GetSchoolYearList, GetTitleType} from "@/api/static_data_api";
++import '@/api/global.js'
++
++export default {
++  components: {QueryData},
++  data () {
++    let that = this
++    return {
++      refuseReason: null,
++      type_list:[],
++      schoolyear_List:[],
++      queryData: {
++        title: null,
++        type: null,
++        studentName: null,
++        schoolyear: null,
++        selectStatus: null,
++      },
++      table: {
++        total: 0,
++        currentPage: 1,
++        pageSize: 10,
++        firstColumn: { type: 'selection' },
++        data: [],
++        senddata:[],
++
++      },
++      columns: [
++        { prop: 'pno', label: '选题编号', minWidth: '200', noShowColumn: true },
++        { prop: 'title', label: '标题', minWidth: '200', noShowColumn: true },
++        { prop: 'type', label: '项目类型', minWidth: '100', noShowColumn: true },
++        { prop: 'checkStatus', label: '审核状态', minWidth: '220', noShowColumn: true },
++        { prop: 'selectStatus', label: '选题状态', minWidth: '180', noShowColumn: true },
++        // { prop: 'studentName', label: '学生姓名', minWidth: '180', noShowColumn: true },
++        { prop: 'schoolyear', label: '学年', minWidth: '180', noShowColumn: true },
++        { prop: 'rejectReason', label: '拒绝原因', minWidth: '180', noShowColumn: true },
++        {
++          prop: 'address', label: '操作', minWidth: '250',
++          customRender: {
++            comps: [
++              {
++                comp: 'el-link',
++                text: '编辑',
++                bind: {
++                  type: 'primary'
++                },
++                event (scope) {
++                  return {
++                    click () {
++                      that.handleEditTable('编辑', scope.row)
++                    }
++                  }
++                }
++              },
++              {
++                comp: 'el-popconfirm',
++                bind: {
++                  title: '确认删除该条数据？'
++                },
++                event (scope) {
++                  return {
++                    confirm () {
++                      that.handledeleteTable(scope.row)
++                    }
++                  }
++                },
++                child: [
++                  {
++                    slot: 'reference',
++                    comp: 'el-link',
++                    text: '删除',
++                    bind: {
++                      type: 'primary'
++                    }
++                  }
++                ]
++              }
++            ]
++          }
++        }
++      ]
++    }
++  },
++  methods: {
++    // 复选框选中
++    selectionChange (val) {
++      this.senddata = val;
++
++      console.log('复选框选中值1', this.senddata)
++      console.log('queryData', this.queryData)
++    },
++    // 取消选中
++    cancelCheck () {
++      this.$refs.tableCheckbox.clearSelection()
++    },
++    acceptPaper(){
++      AcceptPaper(this.senddata).then(res=>{
++        if(res.data.code===200){
++          this.$message({
++            message: '操作成功',
++            type: 'success'
++          });
++        }
++        else{
++          this.$message({
++            message: res.data.msg,
++            type: 'error'
++          });
++        }
++      })
++      //两秒后刷新页面
++      setTimeout(function () {
++        window.location.reload();
++      }, 2000);
++
++
++    },
++    // 点击查询按钮
++    conditionEnter(data) {
++      console.log('查询条件', data)
++      // this.queryData = data
++      // // console.log('最终条件', this.getQueryData)
++      // this.$store.commit('setQueryData', this.getQueryData)
++      console.log('最终条件', this.$store.state.queryData)
++      TeacherGetAllPaper(sessionStorage.getItem('tno'),data).then(res => {
++        this.table.data = res.data.data
++      })
++
++    },
++    handleEditTable (val, type) {
++      console.log('编辑', type)
++
++      this.$router.push({path: '/teacher/edit_paper', query: {pno: type.pno}})
++
++    },
++    handledeleteTable (val) {
++      DeletePaper(val.pno).then(res=>{
++        if(res.data.code===200){
++          this.$message({
++            message: '操作成功',
++            type: 'success'
++          });
++        }
++        else{
++          this.$message({
++            message: res.data.msg,
++            type: 'error'
++          });
++        }
++      })
++      //两秒后刷新页面
++      setTimeout(function () {
++        window.location.reload();
++      }, 2000);
++    }
++  },
++  computed: {
++    opts() {
++      return {
++        title: {
++          label: '选题名称',
++          comp: 'el-input'
++        },
++        type: {
++          label: '选题类型',
++          comp: 't-select',
++          bind:{
++            optionSource: this.type_list,
++            valueKey:'type',
++            labelKey:'type'
++          }
++        },
++        studentName: {
++          label: '学生姓名',
++          comp: 'el-input',
++        },
++        schoolyear: {
++          label: '学年',
++          comp: 't-select',
++          changeEvent: 'change',
++          // defaultVal: 'W1',
++          bind: {
++            optionSource: this.schoolyear_List,
++            valueKey:'schoolyear',
++            labelKey:'schoolyear'
++          },
++        },
++        selectStatus: {
++          label: '选择状态',
++          comp: 't-select',
++          bind: {
++            optionSource: selectStatus_List,
++          },
++        },
++
++      }
++    },
++    // 查询条件所需参数
++    getQueryData() {
++      const { title, type, studentName, schoolyear,selectStatus } = this.queryData
++      return {
++        title,
++        type,
++        studentName,
++        schoolyear,
++        selectStatus
++      }
++    }
++  },
++  created() {
++    TeacherGetAllPaper(sessionStorage.getItem('tno'),this.getQueryData).then(res => {
++      this.table.data = res.data.data
++      this.queryData=this.$store.state.queryData
++    })
++    GetTitleType().then(res=>{
++      const that = this;
++      that.type_list = res.data.data
++      that.checkStatus_List = checkStatus_List
++      console.log('checkStatus_List',that.checkStatus_List)
++    })
++    GetSchoolYearList().then(res=>{
++      const that = this;
++      that.schoolyear_List = res.data.data
++      console.log('schoolyear_List',that.schoolyear_List)
++    })
++  },
++  watch:{
++
++  }
++
++}
++
++</script>
++
++<style scoped>
++
++</style>
+\ No newline at end of file
+Index: sys_view/view/src/views/teacher/Paper/TeacherEditPaper.vue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/views/teacher/Paper/TeacherEditPaper.vue b/sys_view/view/src/views/teacher/Paper/TeacherEditPaper.vue
+new file mode 100644
+--- /dev/null	(revision 6e958fcd95782418213903985fba7906a975cf17)
++++ b/sys_view/view/src/views/teacher/Paper/TeacherEditPaper.vue	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -0,0 +1,182 @@
++<template>
++  <div >
++    <el-form style="width: 60%" :model="ruleForm" :rules="rules" ref="ruleForm" label-width="100px" class="demo-ruleForm">
++
++      <el-form-item label="选题编号" prop="pno" >
++        <el-input :disabled="true"v-model="ruleForm.pno" :value="ruleForm.pno"></el-input>
++      </el-form-item>
++      <el-form-item label="审核状态" prop="title">
++        <el-input :disabled="true" v-model="checkStatus_vo" :value="checkStatus_vo"></el-input>
++      </el-form-item>
++      <el-form-item label="选题名称" prop="title">
++        <el-input v-model="ruleForm.title" :value="ruleForm.title"></el-input>
++      </el-form-item>
++
++
++      <el-form-item label="选题描述" prop="description" >
++        <el-input v-model="ruleForm.description"></el-input>
++      </el-form-item>
++      <el-form-item label="选题类型" prop="type">
++        <el-select v-model="ruleForm.type"  placeholder="请选择">
++          <el-option
++              v-for="item in typeList"
++              :label="item.type"
++              :value="item.type"
++          >
++          </el-option>
++        </el-select>
++      </el-form-item>
++      <el-form-item label="选题学年" prop="schoolyear" >
++        <el-select v-model="ruleForm.schoolyear"  placeholder="请选择">
++          <el-option
++              v-for="item in schoolyearList"
++              :label="item.schoolyear"
++              :value="item.schoolyear"
++          >
++          </el-option>
++        </el-select>
++      </el-form-item>
++      <el-form-item>
++        <el-button type="primary" @click="submitForm('ruleForm')">提交</el-button>
++        <el-button @click="resetForm('ruleForm')">重置</el-button>
++        <el-button type="danger" @click="reCheckPaper('ruleForm')">重新提交审核</el-button>
++
++      </el-form-item>
++
++
++    </el-form>
++  </div>
++</template>
++
++<script>
++import {GetEducationList, GetSchoolYearList, GetTeacherTitleList, GetTitleType} from "@/api/static_data_api";
++import {EditPaper, EditTeacherInfo, GetPaperByPno, getTeacherInfo} from "@/api/teacher_api";
++export default {
++  name: "TeacherEditPaper",
++
++  data() {
++    let that = this
++    return {
++
++      typeList: [],
++      schoolyearList:[],
++      checkStatus_vo: null,
++
++
++      ruleForm: {
++        pno: this.$route.query.pno,
++        title: null,
++        type: null,
++        checkStatus: null,
++        schoolyear: null,
++        description: null,
++      },
++
++      rules: {
++        pno: [
++          {required: true, message: '请输入选题编号', trigger: 'blur'},
++        ],
++        title: [
++          {required: true, message: '请输入选题名称', trigger: 'blur'},
++        ],
++        description: [
++          {required: true, message: '请输入选题描述', trigger: 'blur'},
++        ],
++      }
++    };
++  },
++
++  created() {
++    GetPaperByPno(this.$route.query.pno).then(res => {
++      this.ruleForm = res.data.data
++      if(this.ruleForm.checkStatus === 'NOT_CHECK'){
++        this.checkStatus_vo = "审核中"
++      }else if(this.ruleForm.checkStatus === 'CHECK'){
++        this.checkStatus_vo = "审核通过"
++      }
++    })
++    GetSchoolYearList().then(res => {
++      this.schoolyearList = res.data.data
++    })
++    GetTitleType().then(res => {
++      this.typeList = res.data.data
++    })
++
++
++
++
++
++  },
++  methods: {
++    submitForm(formName) {
++      this.$refs[formName].validate((valid) => {
++        if (valid) {
++          // 通过前端校验
++          const that = this
++          EditPaper(this.ruleForm).then(res => {
++            if (res.data.code === 200) {
++              this.$message({
++                message: '修改成功',
++                type: 'success'
++              });
++              //两秒后跳转
++              setTimeout(function () {
++                that.$router.push({path: '/teacher/my_paper'})
++              }, 2000)
++
++            } else {
++              this.$message({
++                message: '修改失败',
++                type: 'error'
++              });
++            }
++          })
++
++        }
++      });
++    },
++    resetForm(formName) {
++      this.$refs[formName].resetFields();
++    },
++    reCheckPaper(formName) {
++      this.$refs[formName].validate((valid) => {
++        if (valid) {
++          if(this.ruleForm.checkStatus === 'CHECK'){
++            this.$message({
++              message: '审核通过的选题不能重新提交审核',
++              type: 'error'
++            });
++            return
++          }
++          // 通过前端校验
++          const that = this
++          this.ruleForm.checkStatus = 'NOT_CHECK'
++          EditPaper(this.ruleForm).then(res => {
++            if (res.data.code === 200) {
++              this.$message({
++                message: '修改成功',
++                type: 'success'
++              });
++              //两秒后跳转
++              setTimeout(function () {
++                that.$router.push({path: '/teacher/my_paper'})
++              }, 2000)
++
++            } else {
++              this.$message({
++                message: '修改失败',
++                type: 'error'
++              });
++            }
++          })
++
++        }
++      });
++    },
++  }
++}
++</script>
++
++<style scoped>
++
++</style>
+\ No newline at end of file
+Index: sys_view/view/src/views/teacher/TeacherHome/editorTeacherInfo.vue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/views/teacher/TeacherHome/editorTeacherInfo.vue b/sys_view/view/src/views/teacher/TeacherHome/editorTeacherInfo.vue
+new file mode 100644
+--- /dev/null	(revision 6e958fcd95782418213903985fba7906a975cf17)
++++ b/sys_view/view/src/views/teacher/TeacherHome/editorTeacherInfo.vue	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -0,0 +1,174 @@
++<template>
++  <div >
++    <el-form style="width: 60%" :model="ruleForm" :rules="rules" ref="ruleForm" label-width="100px" class="demo-ruleForm">
++
++      <el-form-item label="我的姓名" prop="teacherName">
++        <el-input v-model="ruleForm.teacherName" :value="ruleForm.teacherName"></el-input>
++      </el-form-item>
++      <el-form-item label="我的电话" prop="tel" >
++        <el-input v-model="ruleForm.tel"></el-input>
++      </el-form-item>
++      <el-form-item label="我的邮箱" prop="email" >
++        <el-input v-model="ruleForm.email"></el-input>
++      </el-form-item>
++
++      <el-form-item label="职称" prop="title">
++        <el-select v-model="ruleForm.title"  placeholder="请选择">
++          <el-option
++              v-for="item in titleList"
++              :label="item.title"
++              :value="item.title"
++          >
++          </el-option>
++        </el-select>
++      </el-form-item>
++
++      <el-form-item label="性别" prop="sex">
++        <el-select v-model="ruleForm.sex" placeholder="请选择性别">
++          <el-option
++              v-for="item in infoList.tsexList"
++              :key="item"
++              :label="item"
++              :value="item"
++          >
++          </el-option>
++        </el-select>
++      </el-form-item>
++
++      <!--      学历-->
++      <el-form-item label="学历" prop="education">
++        <el-select v-model="ruleForm.education" placeholder="请选择">
++          <el-option
++              v-for="item in educationList"
++              :key="item.label"
++              :label="item.education"
++              :value="item.education"
++          >
++          </el-option>
++        </el-select>
++      </el-form-item>
++      <el-form-item label="生日" prop="birth">
++      <el-date-picker
++          v-model="ruleForm.birth"
++          type="datetime"
++          placeholder="选择日期">
++      </el-date-picker>
++      </el-form-item>
++
++
++      <el-form-item>
++        <el-button type="primary" @click="submitForm('ruleForm')">提交</el-button>
++        <el-button @click="resetForm('ruleForm')">重置</el-button>
++
++      </el-form-item>
++    </el-form>
++  </div>
++</template>
++<script>
++
++import {GetEducationList, GetTeacherTitleList} from "@/api/static_data_api";
++import {EditTeacherInfo, getTeacherInfo} from "@/api/teacher_api";
++
++export default {
++  data() {
++    return {
++      titleList: [],
++      educationList:[],
++
++
++      ruleForm: {
++        tno: sessionStorage.getItem("tno"),
++        teacherName: null,
++        title: null,
++        sex:null,
++        tel:null,
++        email:null,
++        education: null,
++        birth: null,
++      },
++      resetpass: {
++        tno:null,
++        password:123456,
++      },
++      infoList: {
++        tsexList: ["男", "女"],
++      },
++      rules: {
++        teacherName: [
++          {required: true, message: "请输入名称", trigger: "blur"},
++          {min: 2, max: 5, message: "长度在 2 到 5 个字符", trigger: "blur"},
++        ],
++        sex: [
++          {required: true, message: "请选择性别", trigger: "blur"},
++        ],
++        collegeid: [
++          {required: true, message: "请输入学院", trigger: "blur"},
++        ],
++        tel: [
++          {required: true, message: "请输入电话", trigger: "blur"},
++          {pattern: /^-?\d+$/, message: "请输入数字", trigger: "blur"},
++        ],
++        education: [
++          {required: true, message: "请输入学历", trigger: "blur"},
++        ],
++        email: [
++          {required: true, message: "请输入邮箱", trigger: "blur"},
++          {type: "email", message: "请输入正确的邮箱地址", trigger: ["blur", "change"]},
++        ],
++      }
++    };
++  },
++  created() {
++    GetTeacherTitleList().then(res => {
++      this.titleList = res.data.data
++    })
++    GetEducationList().then(res => {
++      this.educationList = res.data.data
++    })
++    getTeacherInfo(sessionStorage.getItem('tno')).then(res => {
++      this.ruleForm = res.data.data
++    })
++    
++
++  },
++  methods: {
++    submitForm(formName) {
++      this.$refs[formName].validate((valid) => {
++        if (valid) {
++          // 通过前端校验
++          const that = this
++          console.log(this.ruleForm)
++          EditTeacherInfo(this.ruleForm).then(res=>{
++            if (res.data.code === 200) {
++              this.$message({
++                message: "修改成功",
++                type: "success",
++                // duration: 1000,
++                // onClose: function () {
++                //   that.$router.push({path: "/teacher/teacherInfo"})
++                // }
++              });
++            } else {
++              this.$message({
++                message: "修改失败",
++                type: "error",
++                duration: 1000,
++              });
++            }
++          })
++
++        }
++      });
++    },
++    resetForm(formName) {
++      this.$refs[formName].resetFields();
++    },
++    test() {
++      console.log(this.ruleForm)
++    },
++
++
++  }
++
++}
++</script>
+\ No newline at end of file
+Index: sys_view/view/src/views/teacher/TeacherHome/teacheRresetPassword.vue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/views/teacher/TeacherHome/teacheRresetPassword.vue b/sys_view/view/src/views/teacher/TeacherHome/teacheRresetPassword.vue
+new file mode 100644
+--- /dev/null	(revision 6e958fcd95782418213903985fba7906a975cf17)
++++ b/sys_view/view/src/views/teacher/TeacherHome/teacheRresetPassword.vue	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -0,0 +1,115 @@
++<template>
++  <div>
++    <el-form
++        ref="ruleForm"
++        :model="ruleForm"
++        :rules="rules"
++        class="demo-ruleForm"
++        label-width="140px"
++        style="width: 60%"
++    >
++
++      <el-form-item label="修改密码" prop="password">
++        <el-input v-model="ruleForm.password" show-password :value="ruleForm.password"></el-input>
++      </el-form-item>
++      <el-form-item label="确认密码" prop="confirmpassword">
++        <el-input v-model="ruleForm.confirmpassword" show-password :value="ruleForm.confirmpassword"></el-input>
++      </el-form-item>
++
++      <el-form-item>
++        <el-button type="primary" @click="submitForm('ruleForm')"
++        >提交
++        </el-button
++        >
++        <el-button @click="resetForm('ruleForm')">重置</el-button>
++      </el-form-item>
++    </el-form>
++  </div>
++</template>
++
++<script>
++import {ResetPassword} from "@/api/teacher_api";
++
++export default {
++  name: "teacheRresetPassword",
++  data() {
++
++    let validateConfirmPassword = (rule, value, callback) => {
++      if (value == '') {
++        callback(new Error("请输入确认密码"));
++      } else if (value !== this.ruleForm.password) {
++        callback(new Error("两次密码输入不一致"));
++      } else {
++        callback();
++      }
++
++    };
++
++
++    return {
++      ruleForm: {
++        tno: this.$store.state.tno,
++        password: '',
++        confirmpassword:'',
++      },
++      rules: {
++        password: [
++          { required: true, message:"请输入密码", trigger: 'blur' }
++        ],
++        confirmpassword: [
++          { required: true, validator: validateConfirmPassword, trigger: 'blur' }
++        ],
++      },
++
++
++    };
++  },
++
++
++
++  methods: {
++    submitForm(formName) {
++      console.log(this.ruleForm);
++      this.$refs[formName].validate((valid) => {
++        console.log(this.ruleForm);
++        if (valid) {
++          // 通过前端校验
++          ResetPassword(sessionStorage.getItem("tno"),this.ruleForm.password).then(response => {
++            if (response.data.code === 200) {
++              this.$message({
++                message: '修改成功，2秒后跳转到登录页面',
++                type: 'success'
++              });
++              //两秒钟后跳转到登录页面
++              setTimeout(() => {
++                this.$router.push({path: '/'});
++              }, 2000);
++            }
++            else {
++              this.$message({
++                message: '修改失败',
++                type: 'error'
++              });
++            }
++          });
++
++        } else {
++          return false;
++        }
++      });
++    },
++    resetForm(formName) {
++      this.$refs[formName].resetFields();
++
++    },
++    test() {
++      console.log(this.ruleForm);
++    },
++  },
++
++}
++</script>
++
++<style scoped>
++
++</style>
+\ No newline at end of file
+Index: sys_view/view/src/views/teacher/TeacherHome/teacherhome.vue
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/sys_view/view/src/views/teacher/TeacherHome/teacherhome.vue b/sys_view/view/src/views/teacher/TeacherHome/teacherhome.vue
+--- a/sys_view/view/src/views/teacher/TeacherHome/teacherhome.vue	(revision 5dcf03d4b1b03390c2455bfdcc693e2d91d537f1)
++++ b/sys_view/view/src/views/teacher/TeacherHome/teacherhome.vue	(revision 6e958fcd95782418213903985fba7906a975cf17)
+@@ -9,13 +9,17 @@
+         ; margin-top: 10px">
+ 
+           <el-descriptions title="我的信息">
+-            <el-descriptions-item label="工号">{{ tno }}</el-descriptions-item>
+-            <el-descriptions-item label="姓名">{{ name }}</el-descriptions-item>
++            <el-descriptions-item label="工号">{{ teacherData.tno }}</el-descriptions-item>
++            <el-descriptions-item label="姓名">{{ teacherData.teacherName }}</el-descriptions-item>
++            <el-descriptions-item label="性别">{{ teacherData.sex }}</el-descriptions-item>
+             <!--            年龄标签-->
+-            <el-descriptions-item label="年龄">{{ tel+'岁' }}</el-descriptions-item>
+-            <el-descriptions-item label="学院">
++            <el-descriptions-item label="生日">{{ teacherData.birth }}</el-descriptions-item>
++            <el-descriptions-item label="电话">{{ teacherData.tel }}</el-descriptions-item>
++            <el-descriptions-item label="邮箱">{{ teacherData.email }}</el-descriptions-item>
+ 
+-              <el-tag size="small">{{  }}</el-tag>
++            <el-descriptions-item label="职称">
++
++              <el-tag size="small">{{ teacherData.title }}</el-tag>
+             </el-descriptions-item>
+             <!--          学历标签-->
+             <el-descriptions-item label="学历">
+@@ -43,12 +47,13 @@
+ data() {
+   return {
+     tno: sessionStorage.getItem('tno'),
+-    name: sessionStorage.getItem('name'),
++    name: sessionStorage.getItem('teacherName'),
+     age: sessionStorage.getItem('age'),
+     education: sessionStorage.getItem('education'),
+     email: sessionStorage.getItem('email'),
+     tel: sessionStorage.getItem('tel'),
+     birth: sessionStorage.getItem('birth'),
++    teacherData:{}
+ 
+   };
+ },
+@@ -60,7 +65,9 @@
+     sessionStorage.setItem('email', res.data.data.email)
+     sessionStorage.setItem('tel', res.data.data.tel)
+     sessionStorage.setItem('birth', res.data.data.birth)
+-
++  })
++  getTeacherInfo(sessionStorage.getItem('tno')).then(res => {
++    this.teacherData = res.data.data
+   })
+ }
+ }
+diff --git a/sys_view/view/src/views/teacher/CreatePaper.vue b/sys_view/view/src/views/teacher/Paper/CreatePaper.vue
+rename from sys_view/view/src/views/teacher/CreatePaper.vue
+rename to sys_view/view/src/views/teacher/Paper/CreatePaper.vue
+diff --git a/sys_view/view/src/views/teacher/NeedCheckPaper.vue b/sys_view/view/src/views/teacher/Paper/NeedCheckPaper.vue
+rename from sys_view/view/src/views/teacher/NeedCheckPaper.vue
+rename to sys_view/view/src/views/teacher/Paper/NeedCheckPaper.vue

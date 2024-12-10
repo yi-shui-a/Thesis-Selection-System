@@ -1,0 +1,56 @@
+HELP.md
+target/
+.idea
+/sys_view/node_modules
+/sys_view/.idea
+/sys_view/target
+/sys_view/.gitignore
+/sys_view/.git
+/sys_view/HELP.md
+/sys_view/README.md
+/sys_view/.mvn
+/sys_view/.mvn/wrapper
+node_modules
+
+/sys_view_new/vue-admin-template/node_modules
+/sys_view_new/vue-admin-template/.idea
+/sys_view_new/vue-admin-template/target
+/sys_view_new/vue-admin-template/.gitignore
+/sys_view_new/vue-admin-template/.git
+/sys_view_new/vue-admin-template/HELP.md
+/sys_view_new/vue-admin-template/README.md
+/sys_view_new/vue-admin-template/.mvn
+/sys_view_new/vue-admin-template/.mvn/wrapper
+
+
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
